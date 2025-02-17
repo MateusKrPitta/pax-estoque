@@ -1,12 +1,12 @@
 import React from 'react';
 
 export default function ButtonComponent({
-    className = '', // Valor padrão para a classe
+    className = '',
     startIcon,
     endIcon,
-    fontWeight = 'semibold', // Valor padrão para fontWeight
-    fontSize = 'sm', // Valor padrão para fontSize
-    textAlign = 'center', // Valor padrão para textAlign
+    fontWeight = 'semibold',
+    fontSize = 'sm',
+    textAlign = 'center',
     onClick,
     isActive,
     disabled,
@@ -16,11 +16,11 @@ export default function ButtonComponent({
     // Tailwind classes para o botão
     const tailwindClasses = `
         ${className} 
-        ${isActive ? 'border border-primary border-b-2 border-b-yellow-300' : disabled ? 'border border-[#cccccc]' : 'border border-primary'}
+        ${isActive ? 'bg-[#006b33] text-white' : 'bg-white text-primary'} // Estilos para o botão ativo
+        border border-primary
         font-${fontWeight}
         text-${fontSize}
         text-${textAlign}
-        bg-white
         p-2
         flex
         items-center
@@ -30,19 +30,19 @@ export default function ButtonComponent({
         transition-colors
         duration-300
         focus:outline-none
-        ${disabled ? 'text-[#cccccc]' : 'hover:bg-primary hover:text-white text-primary'}
+        ${disabled ? 'text-[#cccccc ]' : 'hover:bg-primary hover:text-white'}
     `;
 
     return (
         <button
-            className={tailwindClasses} // Tailwind classes aplicadas ao botão
+            className={tailwindClasses}
             onClick={onClick}
             disabled={disabled}
             title={subtitle}
         >
-            {startIcon && <span className="mr-2">{startIcon}</span>} {/* Ícone inicial, se presente */}
-            {title} {/* Texto do botão */}
-            {endIcon && <span className="ml-2">{endIcon}</span>} {/* Ícone final, se presente */}
+            {startIcon && <span className="mr-2">{startIcon}</span>}
+            {title}
+            {endIcon && <span className="ml-2">{endIcon}</span>}
         </button>
     );
 }

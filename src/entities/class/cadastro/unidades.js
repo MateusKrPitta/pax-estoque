@@ -1,9 +1,9 @@
 import { cadastrosUnidades } from "../../../utils/json/cadastro/unidades.js";
 
 export const unidades = cadastrosUnidades.map(cadastrosUnidade => ({
-    ID: cadastrosUnidade.ID,
-    Descricao: cadastrosUnidade.Descricao,
-    UF: cadastrosUnidade.UF,
-    Telefone: cadastrosUnidade.Telefone,
+    Nome: cadastrosUnidade.Nome,
     CNPJ: cadastrosUnidade.CNPJ,
+    Telefone: cadastrosUnidade.Telefone,
+    Cidade: cadastrosUnidade.Cidade,
+    Endereco: cadastrosUnidade.Endereco,
   }));

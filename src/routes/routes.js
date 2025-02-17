@@ -12,6 +12,7 @@ import Categoria from '../pages/cadastro/categoria';
 import Fornecedor from '../pages/cadastro/fornecedor';
 import Produtos from '../pages/cadastro/produtos';
 import Setor from '../pages/cadastro/setor';
+import Cidade from '../pages/cadastro/cidade';
 
 const AppRoutes = () => {
     return (
@@ -28,6 +29,7 @@ const AppRoutes = () => {
             <Route path="/cadastro/fornecedor" element={<Fornecedor />} />
             <Route path="/cadastro/produtos" element={<Produtos />} />
             <Route path="/cadastro/setor" element={<Setor />} />
+            <Route path="/cadastro/cidade" element={<Cidade />} />
         </Routes>
     );
 };

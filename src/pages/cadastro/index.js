@@ -8,14 +8,14 @@ import MiscellaneousServicesIcon from '@mui/icons-material/MiscellaneousServices
 
 const Cadastro = () => {
     return (
-        <div className="flex gap-3 ">
+        <div className="flex gap-4 ">
             <Navbar />
             <div className='flex flex-col gap-2 w-full items-end'>
                 <MenuMobile />
                 <HeaderPerfil />
                 <h1 className='flex justify-center text-base sm:ml-1  md:text-2xl  font-bold text-primary w-full md:justify-start   '><MiscellaneousServicesIcon/>Cadastro</h1>
                 <div className=" items-center w-full flex mt-[40px] gap-2 flex-wrap md:items-start">
-                    <div className='w-[100%] md:w-[11.5%]'>
+                    <div className='w-[100%] md:w-[13%]'>
                     <HeaderCadastro />
                     </div>
                    

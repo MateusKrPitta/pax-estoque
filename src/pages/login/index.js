@@ -7,6 +7,7 @@ import packageJson from '../../../package.json';
 import logoPax from '../../assets/png/login/multiple_x.png';
 import CustomToast from '../../components/toast';
 import { formatCPF } from '../../utils/formatCPF';
+import { login } from '../../services/post/login';
 
 const LoginPage = () => {
     const navigate = useNavigate();
@@ -31,7 +32,6 @@ const LoginPage = () => {
         setShowPassword(!showPassword);
     };
 
-
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -48,58 +48,36 @@ const LoginPage = () => {
             CustomToast({ type: 'warning', message: 'Informe sua senha!' });
             return;
         }
-
-        const usuario = {
-            nome: 'Aderbal',
-            id: 1,
-            tipo: 1
+    
+        try {
+            setLoading(true);
+            const response = await login(cpf, senha);
+            console.log('Response from login:', response); // Para depuração
+            if (response.status) {
+                const usuario = {
+                    nome: response.data.nome,
+                    id: response.data.id,
+                };
+                localStorage.setItem('user', JSON.stringify(usuario));
+                localStorage.setItem('token', response.data.token);
+                CustomToast({ type: 'success', message: 'Bem vindo(a)' });
+                setTimeout(() => {
+                    setCpf("");
+                    setSenha("");
+                    navigate('/dashboard');
+                    setLoading(false);
+                }, 2000);
+            } else {
+                CustomToast({ type: 'warning', message: response.mensagem });
+                setLoading(false);
+            }
+        } catch (error) {
+            console.log('Error during login:', error); // Para depuração
+            CustomToast({ type: 'error', message: error.mensagem || 'Erro ao fazer login' });
+            setLoading(false);
         }
-        sessionStorage.setItem('user', JSON.stringify(usuario));
-        
-        sessionStorage.setItem('page', '/dashboard');
-        navigate('/dashboard');
-        // try {
-        //     setLoading(true);
-        //     const response = await login(cpf, senha);
-        //     if (response.status) {
-        //         sessionStorage.clear();
-        //         const usuario = {
-        //             nome: response.data.usuario.nome,
-        //             id: response.data.usuario.id,
-        //         }
-        //         sessionStorage.setItem('user', JSON.stringify(usuario));
-        //         sessionStorage.setItem('key', response.data.token);
-        //         sessionStorage.setItem('page', '/dashboard');
-        //         setUser(usuario);
-
-        //         CustomToast({ type: 'success', message: 'Bem vindo(a)' });
-        //         setTimeout(() => {
-        //             setCpf("");
-        //             setSenha("");
-        //             navigate('/dashboard');
-        //             setLoading(false);
-        //         }, 2000);
-        //     } else {
-        //         if (response.mensagem && typeof response.mensagem === 'object') {
-        //             Object.values(response.mensagem).forEach(mensagem => {
-        //                 CustomToast({ type: 'warning', message: mensagem });
-        //                 setLoading(false);
-        //             });
-        //         } else {
-        //             CustomToast({ type: 'warning', message: response.mensagem });
-        //             setLoading(false);
-        //         }
-        //     }
-        // } catch (error) {
-        //     CustomToast({ type: 'error', message: error });
-        //     setLoading(false);
-        // }
-        //teste local
-
-
     };
 
-    
 
     return (
         <div className="login-container flex h-screen items-center justify-center animate-background">

@@ -14,7 +14,7 @@ const CentralModal = ({ open, onClose, title, children, icon, width, top, left, 
             onClose={onClose}
             closeAfterTransition
             BackdropProps={{
-                timeout: 500,
+                timeout: 500, 
             }}
             aria-labelledby="central-modal-title"
             aria-describedby="central-modal-description"

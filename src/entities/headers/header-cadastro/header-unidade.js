@@ -1,10 +1,10 @@
 
 export const headerUnidade = [
-    { key: "ID", label: "ID" },
-    { key: "Descricao", label: "Descrição" }, // Chave para o nome do titular
-    { key: "UF", label: "UF" },
+    { key: "Nome", label: "Nome" },
+    { key: "Cnpj", label: "CNPJ" }, // Chave para o nome do titular
     { key: "Telefone", label: "Telefone" },
-    { key: "CNPJ", label: "CNPJ" },
+    { key: "Cidade", label: "Cidade" },
+    { key: "Endereco", label: "Endereço" },
   ];
   
   
