@@ -13,7 +13,7 @@ import ModalLateral from "../../../components/modal-lateral";
 import { headerCidade } from "../../../entities/headers/header-cadastro/header-cidade";
 import LocationCityIcon from '@mui/icons-material/LocationCity';
 import SelectTextFields from "../../../components/select";
-
+import { useNavigate } from 'react-router-dom';
 import axios from "axios";
 import { criarCidade } from "../../../services/post/cidade";
 import { buscarCidades } from "../../../services/get/cidade"; // Certifique-se de que o caminho está correto
@@ -21,6 +21,7 @@ import { deletarCidade } from "../../../services/delete/cidade";
 import CustomToast from "../../../components/toast";
 
 const Cidade = () => {
+  const navigate = useNavigate();
   const [estados, setEstados] = useState([]);
   const [cidades, setCidades] = useState([]);
   const [estadoSelecionado, setEstadoSelecionado] = useState('');
@@ -32,12 +33,26 @@ const Cidade = () => {
   const handleModalCadastro = () => setCadastro(true);
   const handleCloseModalCadastro = () => setCadastro(false);
 
-  const handleModalEditar = (cidade) => {
+  const handleModalEditar = async (cidade) => {
     setCidadeEditada(cidade);
-    setEstadoSelecionado(cidade.uf); // Preenche o estado
-    setCidadeSelecionada(cidade.id); // Preenche a cidade
+    setEstadoSelecionado(cidade.uf);
     setEditar(true);
+  
+    try {
+      const response = await axios.get(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${cidade.uf}/municipios`);
+      setCidades(response.data);
+  
+      // Aguarda a atualização do estado para definir a cidade corretamente
+      setTimeout(() => {
+        setCidadeSelecionada(cidade.id);
+      }, 300);
+    } catch (error) {
+      console.error("Erro ao buscar cidades:", error);
+    }
   };
+  
+  
+  
   const handleCloseModalEditar = () => setEditar(false);
 
   useEffect(() => {
@@ -86,12 +101,24 @@ const Cidade = () => {
   };
 
   const buscarCidadesCadastradas = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/'); // Redireciona para a página de login se não houver token
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+      return;
+    }
+  
     try {
       const response = await buscarCidades(); // Chama a função que busca as cidades
       console.log('Dados das cidades cadastradas:', response); // Adiciona log para verificar os dados
       setCidadesCadastradas(response.data); // Atualiza o estado com os dados retornados
     } catch (error) {
-      console.error("Erro ao buscar cidades cadastradas:", error);
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+        navigate('/'); // Redireciona para a página de login
+      } else {
+        console.error("Erro ao buscar cidades cadastradas:", error);
+      }
     }
   };
 
@@ -109,6 +136,11 @@ const Cidade = () => {
   };
 
 
+  useEffect(() => {
+    if (cidadeEditada && cidades.length > 0) {
+      setCidadeSelecionada(cidadeEditada.id);
+    }
+  }, [cidades, cidadeEditada]);
 
   useEffect(() => {
     buscarCidadesCadastradas(); // Chama a função ao montar o componente
