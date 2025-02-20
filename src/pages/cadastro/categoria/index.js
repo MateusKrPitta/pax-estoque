@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from '../../../components/navbars/header'
 import HeaderPerfil from '../../../components/navbars/perfil'
 import HeaderCadastro from '../../../components/navbars/cadastro';
@@ -13,20 +13,102 @@ import CentralModal from "../../../components/modal-central";
 import { headerCategoria } from "../../../entities/headers/header-cadastro/header-categoria";
 import { categoria } from "../../../utils/json/categoria";
 import ModalLateral from "../../../components/modal-lateral";
+import { criarCategoria } from "../../../services/post/categoria";
+import CustomToast from "../../../components/toast";
+import { deletarCategoria } from "../../../services/delete/categoria";
+import { buscarCategoria } from "../../../services/get/categoria";
+import { useNavigate } from "react-router-dom";
+import { atualizarCategoria } from "../../../services/put/categoria";
 
 const Categoria = () => {
+  const navigate = useNavigate();
   const [editar, setEditar] = useState(false);
   const [cadastro, setCadastro] = useState(false);
+  const [nome, setNome] = useState(''); // Estado para o nome do setor
+  const [categoriasCadastradas, setCategoriasCadastradas] = useState([]);
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
+
+
   const handleModalCadastro = () => setCadastro(true);
   const handleCloseModalCadastro = () => setCadastro(false);
 
-  const handleModalEditar = () => setEditar(true);
+  const handleModalEditar = (categoria) => {
+    setCategoriaSelecionada(categoria); // Armazena a categoria selecionada
+    setEditar(true);
+  };
   const handleCloseModalEditar = () => setEditar(false);
 
   const rows = categoria.map(categoria => ({
     Nome: categoria.nome,
   }));
 
+  const handleCadastrar = async () => {
+    try {
+      await criarCategoria(nome); // Enviando os dados para a API
+      CustomToast({ type: "success", message: "Setor cadastrado com sucesso!" });
+      buscarCategoriaCadastradas();
+      handleCloseModalCadastro();
+      setNome(''); // Limpa o campo de nome
+    } catch (error) {
+      CustomToast({ type: "error", message: "Erro ao cadastrar categoria!" });
+    }
+  };
+
+  const buscarCategoriaCadastradas = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/'); // Redireciona para a página de login se não houver token
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+      return;
+    }
+
+    try {
+      const response = await buscarCategoria(); // Chama a função que busca as cidades
+      console.log('Dados categoria cadastradas:', response); // Adiciona log para verificar os dados
+      setCategoriasCadastradas(response.data); // Atualiza o estado com os dados retornados
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+        navigate('/'); // Redireciona para a página de login
+      } else {
+        console.error("Erro ao buscar setores cadastrados:", error);
+      }
+    }
+  };
+
+  const handleDeletarCategoria = async (categoria) => {
+    const idCategoria = categoria.id;
+    try {
+      await deletarCategoria(idCategoria);
+      CustomToast({ type: "success", message: "Cidade deletada com sucesso!" });
+      buscarCategoriaCadastradas();
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Erro ao deletar cidade.";
+      CustomToast({ type: "error", message: 'Você não possui permissão para excluir!' });
+      console.error('Erro ao deletar cidade:', error);
+    }
+  };
+
+  const handleAtualizar = async () => {
+    if (!categoriaSelecionada || !categoriaSelecionada.id) {
+      CustomToast({ type: "error", message: "Categoria inválida!" });
+      return;
+    }
+
+    try {
+      await atualizarCategoria(categoriaSelecionada.id, categoriaSelecionada.Nome);
+      CustomToast({ type: "success", message: "Categoria atualizada com sucesso!" });
+      buscarCategoriaCadastradas(); // Atualiza a lista de categorias
+      handleCloseModalEditar(); // Fecha a modal
+    } catch (error) {
+      CustomToast({ type: "error", message: "Erro ao atualizar categoria!" });
+    }
+  };
+
+
+  useEffect(() => {
+    buscarCategoriaCadastradas();
+  }, []);
   return (
     <div className="flex gap-4 ">
       <Navbar />
@@ -72,12 +154,13 @@ const Categoria = () => {
             <div className="w-[90%]">
               <TableComponent
                 headers={headerCategoria}
-                rows={rows} // Passando rows para o TableComponent
-                actionsLabel={"Ações"} // Se você quiser adicionar ações
+                rows={categoriasCadastradas.map(categoria => ({
+                  id: categoria.id,
+                  Nome: categoria.nome,
+                }))}
                 actionCalls={{
-                  edit: handleModalEditar,
-                  delete: ''
-                  // Aqui você pode adicionar ações como editar ou deletar
+                  edit: (categoria) => handleModalEditar(categoria),
+                  delete: (categoria) => handleDeletarCategoria(categoria),
                 }}
               />
             </div>
@@ -103,6 +186,8 @@ const Categoria = () => {
               size="small"
               label="Nome da Categoria"
               name="nome"
+              value={nome} // Vinculando o valor do campo ao estado
+              onChange={(e) => setNome(e.target.value)}
               sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '95%' } }}
               autoComplete="off"
               InputProps={{
@@ -119,6 +204,7 @@ const Categoria = () => {
               title={'Cadastrar'}
               subtitle={'Cadastrar'}
               startIcon={<Save />}
+              onClick={handleCadastrar}
             />
           </div>
         </div>
@@ -139,6 +225,10 @@ const Categoria = () => {
                 size="small"
                 label="Nome da Categoria"
                 name="nome"
+                value={categoriaSelecionada ? categoriaSelecionada.Nome : ''} // Exibe o nome corretamente
+                onChange={(e) =>
+                  setCategoriaSelecionada({ ...categoriaSelecionada, Nome: e.target.value })
+                }
                 sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '95%' } }}
                 autoComplete="off"
                 InputProps={{
@@ -150,13 +240,14 @@ const Categoria = () => {
                 }}
               />
 
+
             </div>
             <div className='w-[95%] mt-2 flex items-end justify-end'>
               <ButtonComponent
                 title={'Salvar'}
                 subtitle={'Salvar'}
                 startIcon={<Save />}
-              />
+                onClick={handleAtualizar} />
             </div>
           </div>
         }

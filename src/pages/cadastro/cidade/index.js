@@ -19,6 +19,7 @@ import { criarCidade } from "../../../services/post/cidade";
 import { buscarCidades } from "../../../services/get/cidade"; // Certifique-se de que o caminho está correto
 import { deletarCidade } from "../../../services/delete/cidade";
 import CustomToast from "../../../components/toast";
+import { atualizarCidade } from "../../../services/put/cidade";
 
 const Cidade = () => {
   const navigate = useNavigate();
@@ -34,25 +35,35 @@ const Cidade = () => {
   const handleCloseModalCadastro = () => setCadastro(false);
 
   const handleModalEditar = async (cidade) => {
+    console.log("Cidade a ser editada:", cidade);
     setCidadeEditada(cidade);
     setEstadoSelecionado(cidade.uf);
     setEditar(true);
-  
+
     try {
-      const response = await axios.get(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${cidade.uf}/municipios`);
+      const response = await buscarCidades(); // Agora pegamos as cidades da sua API
+      console.log("Cidades carregadas da API:", response.data);
       setCidades(response.data);
-  
-      // Aguarda a atualização do estado para definir a cidade corretamente
-      setTimeout(() => {
-        setCidadeSelecionada(cidade.id);
-      }, 300);
+
+      // Buscar a cidade pelo ID para garantir que o select a reconheça
+      const cidadeEncontrada = response.data.find(c => c.id === cidade.id);
+
+      if (cidadeEncontrada) {
+        setCidadeSelecionada(cidadeEncontrada.id);
+      } else {
+        setCidadeSelecionada('');
+      }
     } catch (error) {
-      console.error("Erro ao buscar cidades:", error);
+      console.error("Erro ao buscar cidades cadastradas:", error);
     }
   };
-  
-  
-  
+
+
+  // Adicione este log no render
+  console.log("Cidade selecionada:", cidadeSelecionada);
+
+
+
   const handleCloseModalEditar = () => setEditar(false);
 
   useEffect(() => {
@@ -83,12 +94,12 @@ const Cidade = () => {
       CustomToast({ type: "alert", message: "Por favor, selecione uma cidade e um estado." });
       return;
     }
-  
+
     const cidadeSelecionadaObj = cidades.find(cidade => cidade.id === cidadeSelecionada);
     const nomeCidade = cidadeSelecionadaObj ? cidadeSelecionadaObj.nome : '';
-  
+
     const token = localStorage.getItem('token');
-  
+
     try {
       const response = await criarCidade(nomeCidade, estadoSelecionado, token);
       CustomToast({ type: "success", message: "Cidade cadastrada com sucesso!" });
@@ -107,7 +118,7 @@ const Cidade = () => {
       CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
       return;
     }
-  
+
     try {
       const response = await buscarCidades(); // Chama a função que busca as cidades
       console.log('Dados das cidades cadastradas:', response); // Adiciona log para verificar os dados
@@ -132,6 +143,27 @@ const Cidade = () => {
       const errorMessage = error.response?.data?.message || "Erro ao deletar cidade.";
       CustomToast({ type: "error", message: 'Você não possui permissão para excluir!' });
       console.error('Erro ao deletar cidade:', error);
+    }
+  };
+
+  const handleSalvarEdicao = async () => {
+    if (!cidadeSelecionada || !estadoSelecionado) {
+      CustomToast({ type: "alert", message: "Por favor, selecione uma cidade e um estado." });
+      return;
+    }
+
+    const cidadeSelecionadaObj = cidades.find(cidade => cidade.id === cidadeSelecionada);
+    const nomeCidade = cidadeSelecionadaObj ? cidadeSelecionadaObj.nome : '';
+
+    try {
+      await atualizarCidade(cidadeEditada.id, nomeCidade, estadoSelecionado); // Chama a função de atualização
+      CustomToast({ type: "success", message: "Cidade atualizada com sucesso!" });
+      handleCloseModalEditar(); // Fecha o modal de edição
+      buscarCidadesCadastradas(); // Atualiza a lista de cidades cadastradas
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Erro ao atualizar cidade.";
+      CustomToast({ type: "error", message: errorMessage });
+      console.error('Erro ao atualizar cidade:', error);
     }
   };
 
@@ -254,48 +286,51 @@ const Cidade = () => {
             <ModalLateral
               open={editar}
               handleClose={handleCloseModalEditar}
-              tituloModal="Editar Unidade"
+              tituloModal="Editar Cidade"
               icon={<Edit />}
               tamanhoTitulo="75%"
               conteudo={
                 <div className="">
                   <div className='mt-4 flex gap-3 flex-wrap'>
-                  <SelectTextFields
-                    width={'100px'}
-                    icon={<LocationCityIcon fontSize="small" />}
-                    label={'Estado'}
-                    backgroundColor={"#D9D9D9"}
-                    fontWeight={500}
-                    value={estadoSelecionado}
-                    onChange={(e) => {
-                      const uf = e.target.value;
-                      buscarCidadesPorEstado(uf);
-                      setEstadoSelecionado(uf);
-                    }}
-                    options={estados && estados.length > 0 ? estados.map(estado => ({
-                      value: estado.sigla,
-                      label: estado.sigla
-                    })) : []} // Verificação para evitar erro
-                  />
-                  <SelectTextFields
-                    width={'190px'}
-                    icon={<AssuredWorkloadIcon fontSize="small" />}
-                    label={'Cidade'}
-                    backgroundColor={"#D9D9D9"}
-                    fontWeight={500}
-                    value={cidadeSelecionada}
-                    onChange={(e) => setCidadeSelecionada(e.target.value)}
-                    options={cidades && cidades.length > 0 ? cidades.map(cidade => ({
-                      value: cidade.id,
-                      label: cidade.nome
-                    })) : []} // Verificação para evitar erro
-                  />
+                    <SelectTextFields
+                      width={'100px'}
+                      icon={<LocationCityIcon fontSize="small" />}
+                      label={'Estado'}
+                      backgroundColor={"#D9D9D9"}
+                      fontWeight={500}
+                      value={estadoSelecionado}
+                      onChange={(e) => {
+                        const uf = e.target.value;
+                        buscarCidadesPorEstado(uf);
+                        setEstadoSelecionado(uf);
+                        setCidadeSelecionada(''); // Limpa a cidade selecionada ao mudar o estado
+                      }}
+                      options={estados && estados.length > 0 ? estados.map(estado => ({
+                        value: estado.sigla,
+                        label: estado.sigla
+                      })) : []}
+                    />
+                    <SelectTextFields
+                      width={'190px'}
+                      icon={<AssuredWorkloadIcon fontSize="small" />}
+                      label={'Cidade'}
+                      backgroundColor={"#D9D9D9"}
+                      fontWeight={500}
+                      value={cidadeSelecionada}
+                      onChange={(e) => setCidadeSelecionada(e.target.value)}
+                      options={cidades.length > 0 ? cidades.map(cidade => ({
+                        value: cidade.id,  // Agora pegamos o ID da sua API
+                        label: cidade.nome
+                      })) : []}
+                    />
+
                   </div>
                   <div className='w-[95%] mt-2 flex items-end justify-end'>
                     <ButtonComponent
                       title={'Salvar'}
                       subtitle={'Salvar'}
                       startIcon={<Save />}
+                      onClick={handleSalvarEdicao} // Chama a função de salvar
                     />
                   </div>
                 </div>

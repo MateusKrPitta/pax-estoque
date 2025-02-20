@@ -19,6 +19,8 @@ import { buscarUnidades } from '../../../services/get/unidade';
 import { useNavigate } from 'react-router-dom';
 import { criarSetor } from '../../../services/post/setor';
 import { buscarSetor } from '../../../services/get/setor';
+import { deletarSetor } from '../../../services/delete/setor';
+import { atualizarSetor } from '../../../services/put/setor';
 
 const Setor = () => {
   const navigate = useNavigate();
@@ -32,16 +34,26 @@ const Setor = () => {
   const handleModalCadastro = () => setCadastro(true);
   const handleCloseModalCadastro = () => setCadastro(false);
 
-  const handleModalEditar = (setor) => {
-    console.log("Setor sendo editado:", setor); // Verifica se as informações corretas estão sendo passadas
-    setSetorSelecionado(setor); // Armazena o setor que está sendo editado
-    setEditar(true); // Abre a modal de edição
-  };
   
+  const handleModalEditar = (setor) => {
+    console.log("Setor sendo editado:", setor);
+  
+    // Verifica se setor.unidade_id existe antes de tentar acessá-lo
+    const unidadeId = setor.unidade_id !== undefined ? setor.unidade_id.toString() : '';
+  
+    setSetorSelecionado({
+      ...setor,
+      unidadeId: unidadeId // Define o valor de unidadeId como string ou uma string vazia
+    });
+  
+    setEditar(true);
+  };
+
   const handleCloseModalEditar = () => setEditar(false);
 
   const rows = setor.map(setor => ({
     Nome: setor.nome,
+    unidade_id: setor.unidade_id
   }));
 
   const buscarUnidadesCadastradas = async () => {
@@ -55,9 +67,10 @@ const Setor = () => {
     try {
       const response = await buscarUnidades();
       const unidadesFormatadas = response.data.map(unidade => ({
-        value: unidade.id,
+        value: unidade.id.toString(), // Convertendo ID para string
         label: unidade.nome
       }));
+
       setUnidadesCadastradas(unidadesFormatadas);
     } catch (error) {
       if (error.response && error.response.status === 401) {
@@ -73,6 +86,7 @@ const Setor = () => {
     try {
       await criarSetor(nome, unidadeId); // Enviando os dados para a API
       CustomToast({ type: "success", message: "Setor cadastrado com sucesso!" });
+      buscarUnidadesCadastradas();
       handleCloseModalCadastro();
       setNome(''); // Limpa o campo de nome
       setUnidadeId(''); // Limpa o campo de unidade
@@ -81,6 +95,38 @@ const Setor = () => {
     }
   };
 
+  const handleSalvar = async () => {
+    try {
+      if (!setorSelecionado) {
+        console.error("Nenhum setor selecionado para edição.");
+        return;
+      }
+  
+      const { id, Nome, unidadeId } = setorSelecionado;
+  
+      // Verifica se o unidadeId está definido
+      if (!unidadeId) {
+        console.error("unidadeId não está definido.");
+        CustomToast({ type: "error", message: "Selecione uma unidade válida." });
+        return;
+      }
+  
+      // Chama a função para atualizar a categoria
+      await atualizarSetor( id, Nome, unidadeId);
+  
+      // Exibe uma mensagem de sucesso
+      CustomToast({ type: "success", message: "Setor atualizado com sucesso!" });
+  
+      // Fecha o modal de edição
+      handleCloseModalEditar();
+  
+      // Atualiza a lista de setores cadastrados
+      buscarSetorCadastradas();
+    } catch (error) {
+      console.error("Erro ao salvar setor:", error);
+      CustomToast({ type: "error", message: "Erro ao atualizar setor!" });
+    }
+  };
   const buscarSetorCadastradas = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -103,11 +149,27 @@ const Setor = () => {
     }
   };
 
+  const handleDeletarSetor = async (setor) => {
+    const idSetor = setor.id;
+    try {
+      await deletarSetor(idSetor);
+      CustomToast({ type: "success", message: "Setor deletada com sucesso!" });
+      buscarSetorCadastradas()
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Erro ao deletar Setor.";
+      CustomToast({ type: "error", message: 'Você não possui permissão para excluir!' });
+      console.error('Erro ao deletar Setor:', error);
+    }
+  };
+
   useEffect(() => {
     buscarUnidadesCadastradas();
     buscarSetorCadastradas();
   }, []);
 
+  useEffect(() => {
+    console.log("Setor selecionado atualizado:", setorSelecionado);
+  }, [setorSelecionado]);
   return (
     <div className="flex gap-4 ">
       <Navbar />
@@ -151,18 +213,18 @@ const Setor = () => {
               />
             </div>
             <div className="w-[90%]">
-            <TableComponent
-  headers={headerSetor}
-  rows={setoresCadastradas.map(setor => ({
-    id: setor.id,
-    Nome: setor.nome,
-  }))} // Mapeando os dados para exibir na tabela
-  actionsLabel={"Ações"}
-  actionCalls={{
-    edit: (setor) => handleModalEditar(setor), // Passando o setor inteiro para editar
-    delete: '', // Passando o objeto cidade
-  }}
-/>
+              <TableComponent
+                headers={headerSetor}
+                rows={setoresCadastradas.map(setor => ({
+                  id: setor.id,
+                  Nome: setor.nome,
+                  unidade_id: setor.unidade_id // Inclua o campo unidade_id
+                }))}
+                actionCalls={{
+                  edit: (setor) => handleModalEditar(setor),
+                  delete: (setor) => handleDeletarSetor(setor),
+                }}
+              />
 
             </div>
           </div>
@@ -234,8 +296,8 @@ const Setor = () => {
                     size="small"
                     label="Nome do Setor"
                     name="nome"
-                    value={setorSelecionado ? setorSelecionado.nome : ''} // Verificação se setorSelecionado existe
-                    onChange={(e) => setSetorSelecionado({ ...setorSelecionado, nome: e.target.value })} // Atualiza o nome do setor
+                    value={setorSelecionado ? setorSelecionado.Nome : ''} // Use 'Nome' com 'N' maiúsculo
+                    onChange={(e) => setSetorSelecionado({ ...setorSelecionado, Nome: e.target.value })} // Atualiza o nome do setor
                     sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '95%' } }}
                     autoComplete="off"
                     InputProps={{
@@ -246,25 +308,32 @@ const Setor = () => {
                       ),
                     }}
                   />
+                <SelectTextFields
+  width={'290px'}
+  icon={<LocationCityIcon fontSize="small" />}
+  label={'Unidade'}
+  backgroundColor={"#D9D9D9"}
+  fontWeight={500}
+  options={unidadesCadastradas}
+  value={setorSelecionado?.unidadeId || ''} // Já convertido para string
+  onChange={(e) =>
+    setSetorSelecionado((prev) => ({
+      ...prev,
+      unidadeId: e.target.value,
+    }))
+  }
+/>
 
-                  <SelectTextFields
-                    width={'290px'}
-                    icon={<LocationCityIcon fontSize="small" />}
-                    label={'Unidade'}
-                    backgroundColor={"#D9D9D9"}
-                    fontWeight={500}
-                    options={unidadesCadastradas}
-                    value={setorSelecionado ? setorSelecionado.unidadeId : ''} // Verifica se setorSelecionado existe antes de acessar unidadeId
-                    onChange={(e) => setSetorSelecionado({ ...setorSelecionado, unidadeId: e.target.value })} // Atualiza a unidade do setor
-                  />
+
+
                 </div>
                 <div className='w-[95%] mt-2 flex items-end justify-end'>
-                  <ButtonComponent
-                    title={'Salvar'}
-                    subtitle={'Salvar'}
-                    startIcon={<Save />}
-                   
-                  />
+                <ButtonComponent
+  title={'Salvar'}
+  subtitle={'Salvar'}
+  startIcon={<Save />}
+  onClick={handleSalvar} // Chama a função handleSalvar ao clicar
+/>
                 </div>
               </div>
             }
