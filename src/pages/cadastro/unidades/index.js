@@ -53,26 +53,26 @@ const Unidades = () => {
 
   const handleModalEditar = (unidade) => {
     console.log("Unidade sendo editada:", unidade);
-  
+
     if (!unidade) {
       console.error("Unidade é undefined ou null");
       return;
     }
-  
+
     // Mapeie o nome da cidade para o cidade_id usando o estado cidadeMap
     const cidadeId = Object.keys(cidadeMap).find(key => cidadeMap[key] === unidade.Cidade);
-  
+
     if (!cidadeId) {
       CustomToast({ type: "error", message: "Cidade não encontrada. Por favor, verifique os dados da unidade." });
       return;
     }
-  
+
     setUnidadeSelecionada({
       ...unidade,
       Estado: unidade.uf,
       Cidade: cidadeId, // Use o cidade_id mapeado
     });
-  
+
     setEstado(unidade.uf);
     setCidadeSelecionada(cidadeId);
     setEditar(true);
@@ -96,7 +96,7 @@ const Unidades = () => {
       navigate('/');
       CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
       return;
-    } 
+    }
 
     try {
       const response = await buscarUnidades();
@@ -308,127 +308,127 @@ const Unidades = () => {
             </CentralModal>
 
             <ModalLateral
-  open={editar}
-  handleClose={handleCloseModalEditar}
-  tituloModal="Editar Unidade"
-  icon={<Edit />}
-  tamanhoTitulo="75%"
-  conteudo={
-    <div className="">
-      <div className='mt-4 flex gap-3 flex-wrap'>
-        <TextField
-          fullWidth
-          variant="outlined"
-          size="small"
-          label="Nome da Unidade"
-          name="nome"
-          value={unidadeSelecionada ? unidadeSelecionada.Nome : ''}
-          onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Nome: e.target.value })}
-          sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '100%' } }}
-          autoComplete="off"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <AssuredWorkloadIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          fullWidth
-          variant="outlined"
-          size="small"
-          label="CNPJ"
-          name="cnpj"
-          value={unidadeSelecionada ? unidadeSelecionada.Cnpj : ''}
-          onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Cnpj: e.target.value })}
-          sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '46%' } }}
-          autoComplete="off"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <ArticleIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          fullWidth
-          variant="outlined"
-          size="small"
-          label="Telefone"
-          name="telefone"
-          value={unidadeSelecionada ? unidadeSelecionada.Telefone : ''}
-          onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Telefone: e.target.value })}
-          sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '49%' } }}
-          autoComplete="off"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <PhoneAndroid />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          fullWidth
-          variant="outlined"
-          size="small"
-          label="Endereço"
-          name="endereco"
-          value={unidadeSelecionada ? unidadeSelecionada.Endereco : ''}
-          onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Endereco: e.target.value })}
-          sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '100%' } }}
-          autoComplete="off"
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <HomeWorkIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        {/* Campo de Estado */}
-        <SelectTextFields
-          width={'140px'}
-          icon={<LocationCityIcon fontSize="small" />}
-          label={'Estado'}
-          backgroundColor={"#D9D9D9"}
-          fontWeight={500}
-          value={unidadeSelecionada ? unidadeSelecionada.Estado : ''} // Use o estado da unidade selecionada
-          onChange={(e) => {
-            setUnidadeSelecionada({ ...unidadeSelecionada, Estado: e.target.value });
-            setCidadeSelecionada(''); // Limpa a cidade selecionada ao mudar o estado
-          }}
-          options={estados.map(estado => ({ value: estado, label: estado }))}
-        />
-        {/* Campo de Cidade */}
-        <SelectTextFields
-          width={'150px'}
-          icon={<AssuredWorkloadIcon fontSize="small" />}
-          label={'Cidade'}
-          backgroundColor={"#D9D9D9"}
-          fontWeight={500}
-          value={cidadeSelecionada || unidadeSelecionada?.Cidade || ''} // Use a cidade selecionada ou a cidade da unidade
-          onChange={(e) => {
-            setUnidadeSelecionada({ ...unidadeSelecionada, Cidade: e.target.value });
-            setCidadeSelecionada(e.target.value); // Atualiza a cidade selecionada
-          }}
-          options={cidades
-            .filter(c => c.uf === (unidadeSelecionada?.Estado || estado)) // Filtra as cidades pelo estado selecionado
-            .map(cidade => ({ value: cidade.id.toString(), label: cidade.nome }))}
-        />
-      </div>
-      <div className='w-[95%] mt-2 flex items-end justify-end'>
-        <ButtonComponent
-          title={'Salvar'}
-          subtitle={'Salvar'}
-          startIcon={<Save />}
-        />
-      </div>
-    </div>
-  }
-/>
+              open={editar}
+              handleClose={handleCloseModalEditar}
+              tituloModal="Editar Unidade"
+              icon={<Edit />}
+              tamanhoTitulo="75%"
+              conteudo={
+                <div className="">
+                  <div className='mt-4 flex gap-3 flex-wrap'>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      label="Nome da Unidade"
+                      name="nome"
+                      value={unidadeSelecionada ? unidadeSelecionada.Nome : ''}
+                      onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Nome: e.target.value })}
+                      sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '100%' } }}
+                      autoComplete="off"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <AssuredWorkloadIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      label="CNPJ"
+                      name="cnpj"
+                      value={unidadeSelecionada ? unidadeSelecionada.Cnpj : ''}
+                      onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Cnpj: e.target.value })}
+                      sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '46%' } }}
+                      autoComplete="off"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <ArticleIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      label="Telefone"
+                      name="telefone"
+                      value={unidadeSelecionada ? unidadeSelecionada.Telefone : ''}
+                      onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Telefone: e.target.value })}
+                      sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '49%' } }}
+                      autoComplete="off"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <PhoneAndroid />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      size="small"
+                      label="Endereço"
+                      name="endereco"
+                      value={unidadeSelecionada ? unidadeSelecionada.Endereco : ''}
+                      onChange={(e) => setUnidadeSelecionada({ ...unidadeSelecionada, Endereco: e.target.value })}
+                      sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '100%' } }}
+                      autoComplete="off"
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <HomeWorkIcon />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    {/* Campo de Estado */}
+                    <SelectTextFields
+                      width={'140px'}
+                      icon={<LocationCityIcon fontSize="small" />}
+                      label={'Estado'}
+                      backgroundColor={"#D9D9D9"}
+                      fontWeight={500}
+                      value={unidadeSelecionada ? unidadeSelecionada.Estado : ''} // Use o estado da unidade selecionada
+                      onChange={(e) => {
+                        setUnidadeSelecionada({ ...unidadeSelecionada, Estado: e.target.value });
+                        setCidadeSelecionada(''); // Limpa a cidade selecionada ao mudar o estado
+                      }}
+                      options={estados.map(estado => ({ value: estado, label: estado }))}
+                    />
+                    {/* Campo de Cidade */}
+                    <SelectTextFields
+                      width={'150px'}
+                      icon={<AssuredWorkloadIcon fontSize="small" />}
+                      label={'Cidade'}
+                      backgroundColor={"#D9D9D9"}
+                      fontWeight={500}
+                      value={cidadeSelecionada || unidadeSelecionada?.Cidade || ''} // Use a cidade selecionada ou a cidade da unidade
+                      onChange={(e) => {
+                        setUnidadeSelecionada({ ...unidadeSelecionada, Cidade: e.target.value });
+                        setCidadeSelecionada(e.target.value); // Atualiza a cidade selecionada
+                      }}
+                      options={cidades
+                        .filter(c => c.uf === (unidadeSelecionada?.Estado || estado)) // Filtra as cidades pelo estado selecionado
+                        .map(cidade => ({ value: cidade.id.toString(), label: cidade.nome }))}
+                    />
+                  </div>
+                  <div className='w-[95%] mt-2 flex items-end justify-end'>
+                    <ButtonComponent
+                      title={'Salvar'}
+                      subtitle={'Salvar'}
+                      startIcon={<Save />}
+                    />
+                  </div>
+                </div>
+              }
+            />
           </div>
         </div>
       </div>

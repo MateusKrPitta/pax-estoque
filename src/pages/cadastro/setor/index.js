@@ -34,18 +34,18 @@ const Setor = () => {
   const handleModalCadastro = () => setCadastro(true);
   const handleCloseModalCadastro = () => setCadastro(false);
 
-  
+
   const handleModalEditar = (setor) => {
     console.log("Setor sendo editado:", setor);
-  
+
     // Verifica se setor.unidade_id existe antes de tentar acessá-lo
     const unidadeId = setor.unidade_id !== undefined ? setor.unidade_id.toString() : '';
-  
+
     setSetorSelecionado({
       ...setor,
       unidadeId: unidadeId // Define o valor de unidadeId como string ou uma string vazia
     });
-  
+
     setEditar(true);
   };
 
@@ -101,25 +101,25 @@ const Setor = () => {
         console.error("Nenhum setor selecionado para edição.");
         return;
       }
-  
+
       const { id, Nome, unidadeId } = setorSelecionado;
-  
+
       // Verifica se o unidadeId está definido
       if (!unidadeId) {
         console.error("unidadeId não está definido.");
         CustomToast({ type: "error", message: "Selecione uma unidade válida." });
         return;
       }
-  
+
       // Chama a função para atualizar a categoria
-      await atualizarSetor( id, Nome, unidadeId);
-  
+      await atualizarSetor(id, Nome, unidadeId);
+
       // Exibe uma mensagem de sucesso
       CustomToast({ type: "success", message: "Setor atualizado com sucesso!" });
-  
+
       // Fecha o modal de edição
       handleCloseModalEditar();
-  
+
       // Atualiza a lista de setores cadastrados
       buscarSetorCadastradas();
     } catch (error) {
@@ -127,6 +127,7 @@ const Setor = () => {
       CustomToast({ type: "error", message: "Erro ao atualizar setor!" });
     }
   };
+  
   const buscarSetorCadastradas = async () => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -308,32 +309,32 @@ const Setor = () => {
                       ),
                     }}
                   />
-                <SelectTextFields
-  width={'290px'}
-  icon={<LocationCityIcon fontSize="small" />}
-  label={'Unidade'}
-  backgroundColor={"#D9D9D9"}
-  fontWeight={500}
-  options={unidadesCadastradas}
-  value={setorSelecionado?.unidadeId || ''} // Já convertido para string
-  onChange={(e) =>
-    setSetorSelecionado((prev) => ({
-      ...prev,
-      unidadeId: e.target.value,
-    }))
-  }
-/>
+                  <SelectTextFields
+                    width={'290px'}
+                    icon={<LocationCityIcon fontSize="small" />}
+                    label={'Unidade'}
+                    backgroundColor={"#D9D9D9"}
+                    fontWeight={500}
+                    options={unidadesCadastradas}
+                    value={setorSelecionado?.unidadeId || ''} // Já convertido para string
+                    onChange={(e) =>
+                      setSetorSelecionado((prev) => ({
+                        ...prev,
+                        unidadeId: e.target.value,
+                      }))
+                    }
+                  />
 
 
 
                 </div>
                 <div className='w-[95%] mt-2 flex items-end justify-end'>
-                <ButtonComponent
-  title={'Salvar'}
-  subtitle={'Salvar'}
-  startIcon={<Save />}
-  onClick={handleSalvar} // Chama a função handleSalvar ao clicar
-/>
+                  <ButtonComponent
+                    title={'Salvar'}
+                    subtitle={'Salvar'}
+                    startIcon={<Save />}
+                    onClick={handleSalvar} // Chama a função handleSalvar ao clicar
+                  />
                 </div>
               </div>
             }

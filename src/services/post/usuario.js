@@ -1,18 +1,25 @@
-import httpsInstance from "../url";
+import httpsInstance from "../url"; // Certifique-se de que isso está correto
 
-export const criarUsuario = async (cpf, senha, nome, unidade, setores) => {
+export const criarUsuario = async (cpf, senha, nome, tipo, setores, token) => {
     const https = httpsInstance();
     try {
-        const response = await https.post('/usuarios', {
+        const response = await https.post('/usuario', {
+            nome,
             cpf,
             senha,
-            nome,
-            unidade: unidade.label, // ou o que for necessário
-            setores: setores.map(setor => setor.label) // ou o que for necessário
+            tipo,
+            permissoes: setores.map(setor => ({
+                setorId: setor.setorId, // Certifique-se de que `setor` tem um campo `setorId`
+                permissao: setor.permissao // Certifique-se de que `setor` tem um campo `permissao`
+            }))
+        }, {
+            headers: {
+                Authorization: `Bearer ${token}` // Inclua o token no cabeçalho
+            }
         });
-        return response.data; // ou qualquer outra coisa que você precise
+        return response.data; // Retorna os dados da resposta
     } catch (error) {
         console.error('Erro ao criar usuário:', error);
-        throw error; // ou trate o erro de outra forma
+        throw error; // Lança o erro para ser tratado externamente
     }
 };

@@ -19,7 +19,9 @@ import { buscarCategoria } from "../../../services/get/categoria";
 import CustomToast from "../../../components/toast";
 import { buscarFornecedor } from "../../../services/get/fornecedores";
 import { criarProduto } from "../../../services/post/produto";
-
+import { buscarProduto } from "../../../services/get/produto";
+import { atualizarProduto } from "../../../services/put/produto";
+import { deletarProduto } from "../../../services/delete/produto";
 const Produtos = () => {
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
@@ -31,19 +33,35 @@ const Produtos = () => {
   const [tiposFornecedores, setTiposFornecedores] = useState([]);
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
   const [fornecedorSelecionado, setFornecedorSelecionado] = useState('');
-
-
+  const [produtoCadastradas, setUnidadesCadastradas] = useState([]);
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null);
   const handleModalCadastro = () => setCadastro(true);
   const handleCloseModalCadastro = () => setCadastro(false);
-  const handleModalEditar = () => setEditar(true);
+
+  const handleModalEditar = (produto) => {
+    console.log("Produto recebido para edição:", produto);
+    const categoriaEncontrada = tiposCategorias.find(categoria => categoria.nome === produto.Categoria);
+    const fornecedorEncontrado = tiposFornecedores.find(fornecedor => fornecedor.nome === produto.Fornecedor);
+
+    setProdutoSelecionado({
+        id: produto.Id, // Use 'Id' em vez de 'id'
+        Nome: produto.Nome,
+        categoria_id: categoriaEncontrada ? categoriaEncontrada.id : '',
+        fornecedor_id: fornecedorEncontrado ? fornecedorEncontrado.id : ''
+    });
+
+    setEditar(true);
+};
   const handleCloseModalEditar = () => setEditar(false);
 
   const rows = produto.map(categoria => ({
+    id: categoria.id, // Adicione o id aqui
     Nome: categoria.nome,
     Quantidade: categoria.quantidade,
     Fornecedor: categoria.fornecedor,
     Categoria: categoria.categoria,
   }));
+
 
   const buscarCategoriaCadastradas = async () => {
     const token = localStorage.getItem('token');
@@ -70,22 +88,45 @@ const Produtos = () => {
       }
     }
   };
+
+  const buscarProdutos = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+      return;
+    }
+
+    try {
+      const response = await buscarProduto();
+      setUnidadesCadastradas(response.data); // Certifique-se de que response.data contém os produtos
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+        navigate('/');
+      } else {
+        console.error("Erro ao buscar unidades cadastradas:", error);
+      }
+    }
+  };
+
   const handleCadastrar = async () => {
     // Verifica se todos os campos necessários estão preenchidos
     if (!nome || !categoriaSelecionada || !fornecedorSelecionado) {
       CustomToast({ type: "error", message: "Por favor, preencha todos os campos!" });
       return;
     }
-  
+
     // Extraindo os valores necessários
     const produtoNome = nome; // Nome do produto
     const categoriaId = categoriaSelecionada.id; // ID da categoria selecionada
     const fornecedorId = fornecedorSelecionado.id; // ID do fornecedor selecionado
-  
+
     try {
       // Chamando a função com os parâmetros corretos
       await criarProduto(produtoNome, categoriaId, fornecedorId);
       CustomToast({ type: "success", message: "Produto cadastrado com sucesso!" });
+      buscarProdutos();
       handleCloseModalCadastro();
       setNome(''); // Limpa o campo de nome
       setCategoriaSelecionada(''); // Limpa a categoria selecionada
@@ -99,6 +140,7 @@ const Produtos = () => {
       } else {
         CustomToast({ type: "error", message: "Erro ao cadastrar produto!" });
       }
+
     }
   };
 
@@ -128,15 +170,48 @@ const Produtos = () => {
     }
   };
 
+  const handleAtualizarProduto = async () => {
+    if (!produtoSelecionado?.Nome || !produtoSelecionado?.categoria_id || !produtoSelecionado?.fornecedor_id) {
+      CustomToast({ type: "error", message: "Por favor, preencha todos os campos!" });
+      return;
+    }
+
+    console.log("Atualizando produto:", produtoSelecionado); // Adicione este log
+
+    try {
+      await atualizarProduto(produtoSelecionado.id, produtoSelecionado.Nome, produtoSelecionado.categoria_id, produtoSelecionado.fornecedor_id);
+      CustomToast({ type: "success", message: "Produto atualizado com sucesso!" });
+
+      // Atualizar a lista de produtos
+      await buscarProdutos();
+      handleCloseModalEditar();
+    } catch (error) {
+      CustomToast({ type: "error", message: "Erro ao atualizar o produto!" });
+    }
+  };
+  const handleDeletarProduto = async (setor) => {
+    const idSetor = setor.id;
+    try {
+      await deletarProduto(idSetor);
+      CustomToast({ type: "success", message: "Produto deletado com sucesso!" });
+      buscarProdutos()
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || "Erro ao deletar Produto.";
+      CustomToast({ type: "error", message: 'Você não possui permissão para excluir!' });
+      console.error('Erro ao deletar Produto:', error);
+    }
+  };
+
+
   useEffect(() => {
+    buscarProdutos();
     buscarCategoriaCadastradas();
     buscarForncedorCadastradas();
   }, []);
 
   useEffect(() => {
-    console.log('Tipos de Categorias:', tiposCategorias);
-    console.log('Tipos de Fornecedores:', tiposFornecedores);
-  }, [tiposCategorias, tiposFornecedores]);
+    console.log('Produtos cadastrados:', produtoCadastradas); // Verifique se os produtos estão sendo carregados
+  }, [produtoCadastradas]);
 
   return (
     <div className="flex gap-4 ">
@@ -185,11 +260,17 @@ const Produtos = () => {
             <div className="w-[90%]">
               <TableComponent
                 headers={headerProduto}
-                rows={rows}
+                rows={produtoCadastradas.map(produto => ({
+                  Id: produto.id,
+                  Nome: produto.nome,
+                  Quantidade: produto.quantidade,
+                  Fornecedor: produto.fornecedor,
+                  Categoria: produto.categoria,
+                }))}
                 actionsLabel={"Ações"}
                 actionCalls={{
-                  edit: handleModalEditar,
-                  delete: ''
+                  edit: (produto) => handleModalEditar(produto), // Certifique-se de que 'produto' está correto aqui
+                  delete: (produto) => handleDeletarProduto(produto),
                 }}
               />
             </div>
@@ -285,6 +366,8 @@ const Produtos = () => {
                       size="small"
                       label="Nome do Produto"
                       name="nome"
+                      value={produtoSelecionado?.Nome || ''} // Use "Nome" em vez de "nome"
+                      onChange={(e) => setProdutoSelecionado({ ...produtoSelecionado, Nome: e.target.value })}
                       sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '98%' } }}
                       autoComplete="off"
                       InputProps={{
@@ -296,28 +379,48 @@ const Produtos = () => {
                       }}
                     />
                     <SelectTextFields
-                      width={'150px'}
+                      width={'295px'}
                       icon={<Category fontSize="small" />}
                       label={'Categoria'}
                       backgroundColor={"#D9D9D9"}
                       fontWeight={500}
-                      options={tiposCategorias}
+                      options={tiposCategorias.map(categoria => ({
+                        value: categoria.id,
+                        label: categoria.nome
+                      }))}
+                      value={produtoSelecionado?.categoria_id || ''}
+                      onChange={(e) => {
+                        const selected = tiposCategorias.find(categoria => categoria.id === e.target.value);
+                        setProdutoSelecionado({ ...produtoSelecionado, categoria_id: selected?.id });
+                      }}
                     />
+
                     <SelectTextFields
-                      width={'175px'}
+                      width={'295px'}
                       icon={<PostAddIcon fontSize="small" />}
                       label={'Fornecedor'}
                       backgroundColor={"#D9D9D9"}
                       fontWeight={500}
-                      options={tiposFornecedores}
+                      options={tiposFornecedores.map(fornecedor => ({
+                        value: fornecedor.id,
+                        label: fornecedor.nome
+                      }))}
+                      value={produtoSelecionado?.fornecedor_id || ''}
+                      onChange={(e) => {
+                        const selected = tiposFornecedores.find(fornecedor => fornecedor.id === e.target.value);
+                        setProdutoSelecionado({ ...produtoSelecionado, fornecedor_id: selected?.id });
+                      }}
                     />
+
                   </div>
                   <div className='w-[95%] mt-2 flex items-end justify-end'>
                     <ButtonComponent
                       title={'Salvar'}
                       subtitle={'Salvar'}
                       startIcon={<Save />}
+                      onClick={handleAtualizarProduto}
                     />
+
                   </div>
                 </div>
               }

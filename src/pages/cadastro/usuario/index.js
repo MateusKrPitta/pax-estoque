@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from '../../../components/navbars/header';
 import HeaderPerfil from '../../../components/navbars/perfil';
 import HeaderCadastro from '../../../components/navbars/cadastro';
@@ -9,35 +9,37 @@ import { AddCircleOutline, Edit, Person, Save, Search } from "@mui/icons-materia
 import ButtonComponent from "../../../components/button";
 import CentralModal from "../../../components/modal-central"
 import SelectTextFields from "../../../components/select"
-import ContactPageIcon from '@mui/icons-material/ContactPage';
 import ContactEmergencyIcon from '@mui/icons-material/ContactEmergency';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import TableComponent from '../../../components/table'
 import './usuario.css'
 import ButtonClose from "../../../components/buttons/button-close";
 import { headerUsuario } from "../../../entities/headers/header-cadastro/header-usuario";
-import { usuarios } from "../../../utils/json/usuario";
-import ModalLateral from '../../../components/modal-lateral'
-import { unidade } from "../../../utils/json/unidades";
 import { criarUsuario } from "../../../services/post/usuario";
+import ArticleIcon from '@mui/icons-material/Article';
+import MaskedFieldCpf from "../../../utils/mascaras/cpf";
+import CustomToast from "../../../components/toast";
+import { useNavigate } from "react-router-dom";
+import { buscarUsuario } from "../../../services/get/usuario";
+import { buscarSetor } from "../../../services/get/setor";
+import { buscarUnidades } from "../../../services/get/unidade";
+import ModalLateral from "../../../components/modal-lateral";
 
 const Usuario = () => {
+  const navigate = useNavigate();
   const [cadastro, setCadastro] = useState(false);
   const [selectedUnidade, setSelectedUnidade] = useState(null);
+  const [selectedTipoAcesso, setSelectedTipoAcesso] = useState(null);
   const [selectedSetores, setSelectedSetores] = useState([]);
   const [addedItems, setAddedItems] = useState([]);
   const [showAddedItems, setShowAddedItems] = useState(false);
   const [editar, setEditar] = useState(false);
   const [nome, setNome] = useState('');
   const [cpf, setCpf] = useState('');
-  const [telefone, setTelefone] = useState('');
   const [senha, setSenha] = useState('');
-
-  // Definindo rows a partir de usuarios
-  const rows = unidade.map(usuario => ({
-    Nome: usuario.nome,
-    Unidade: usuario.unidade,
-  }));
+  const [produtosCadastradas, setProdutosCadastradas] = useState([]);
+  const [setoresCadastradas, setSetoresCadastradas] = useState([]);
+  const [unidadesCadastradas, setUnidadesCadastradas] = useState([]);
 
   const tiposUsuarios = [
     { value: 1, label: 'Administrador' },
@@ -46,32 +48,19 @@ const Usuario = () => {
     { value: 4, label: 'Colaborador' },
   ];
 
-  const unidades = [
-    { value: 1, label: 'Dourados' },
-    { value: 2, label: 'Itaporã' },
-    { value: 3, label: 'Ponta Porã' },
-  ];
-
   const permissao = [
-    { value: 1, label: 'Visualizar' },
-    { value: 2, label: 'Editar' },
-    { value: 3, label: 'Visualizar/Editar' },
-  ];
-
-  const setores = [
-    { value: 1, label: 'RH' },
-    { value: 2, label: 'TI' },
-    { value: 3, label: 'Suporte' },
+    { value: 3, label: 'Visualizar' },
+    { value: 4, label: 'Visualizar/Editar' },
   ];
 
   const handleUnidade = (event) => {
-    const selected = unidades.find(u => u.value === event.target.value);
+    const selected = unidadesCadastradas.find(u => u.value === event.target.value);
     setSelectedUnidade(selected);
   };
 
   const handleSetores = (event) => {
     const { target: { value } } = event;
-    const selected = setores.filter(s => value.includes(s.value));
+    const selected = setoresCadastradas.filter(s => value.includes(s.value));
     setSelectedSetores(selected);
   };
 
@@ -85,7 +74,10 @@ const Usuario = () => {
     if (selectedUnidade && selectedSetores.length > 0) {
       const newItem = {
         unidade: selectedUnidade,
-        setores: selectedSetores.map(setor => ({ ...setor, permissao: '' }))
+        setores: selectedSetores.map(setor => ({
+          ...setor,
+          permissao: selectedTipoAcesso // Atribui a permissão com base no tipo de acesso
+        }))
       };
       setAddedItems([...addedItems, newItem]);
       setSelectedUnidade(null);
@@ -94,26 +86,36 @@ const Usuario = () => {
     }
   };
 
-  const handlePermissaoChange = (setorValue, newPermissao) => {
-    const updatedItems = addedItems.map(item => {
-      if (item.setores.some(setor => setor.value === setorValue)) {
-        return {
-          ...item,
-          setores: item.setores.map(setor =>
-            setor.value === setorValue ? { ...setor, permissao: newPermissao } : setor
-          )
-        };
-      }
-      return item;
-    });
-    setAddedItems(updatedItems);
-  };
 
-  
+
   const handleCadastrar = async () => {
     try {
-      const response = await criarUsuario(cpf, senha, nome, selectedUnidade, selectedSetores);
-      console.log('Usuário cadastrado com sucesso:', response);
+      // Verifique se todos os campos estão preenchidos
+
+
+      // Coletar o tipo de acesso selecionado
+      const tipoAcesso = tiposUsuarios.find(t => t.value === selectedTipoAcesso);
+      if (!tipoAcesso) {
+        CustomToast({ type: "error", message: "Tipo de acesso inválido." });
+        return;
+      }
+
+      // Formatar os setores e permissões
+      const permissoes = addedItems.flatMap(item =>
+        item.setores.map(setor => ({
+          setorId: setor.value,
+          permissao: setor.permissao // Agora estamos pegando a permissão correta
+        }))
+      );
+
+      const token = localStorage.getItem('token'); // Obtenha o token do localStorage
+      if (!token) {
+        CustomToast({ type: "error", message: "Token de acesso não encontrado." });
+        return;
+      }
+
+      const response = await criarUsuario(cpf, senha, nome, tipoAcesso.value, permissoes, token);
+      CustomToast({ type: "success", message: "Usuário cadastrado com sucesso" });
 
       // Limpar campos
       setNome('');
@@ -121,15 +123,110 @@ const Usuario = () => {
       setSenha('');
       setSelectedUnidade(null);
       setSelectedSetores([]);
-      setShowAddedItems(false); // Se você estiver usando isso para mostrar os itens adicionados
+      setShowAddedItems(false);
 
       // Fechar o modal
       handleCloseModalCadastro();
     } catch (error) {
-      console.error('Erro ao cadastrar usuário:', error);
+      CustomToast({ type: "error", message: "Erro ao cadastrar usuário" });
     }
   };
 
+  const buscarProdutosCadastradas = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+      return;
+    }
+
+    try {
+      const response = await buscarUsuario();
+      setProdutosCadastradas(response.data);
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+        navigate('/');
+      } else {
+        console.error("Erro ao buscar unidades cadastradas:", error);
+      }
+    }
+  };
+
+  const buscarSetorCadastradas = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/'); // Redireciona para a página de login se não houver token
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+      return;
+    }
+
+    try {
+      const response = await buscarSetor(); // Chama a função que busca as cidades
+      console.log('Dados setores cadastradas:', response); // Adiciona log para verificar os dados
+      setSetoresCadastradas(response.data); // Atualiza o estado com os dados retornados
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." }); // Exibe o toast
+        navigate('/'); // Redireciona para a página de login
+      } else {
+        console.error("Erro ao buscar setores cadastrados:", error);
+      }
+    }
+  };
+
+  const buscarUnidadesCadastradas = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/');
+      CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+      return;
+    }
+
+    try {
+      const response = await buscarUnidades();
+      setUnidadesCadastradas(response.data);
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        CustomToast({ type: "error", message: "A sessão expirou. Por favor, faça login novamente." });
+        navigate('/');
+      } else {
+        console.error("Erro ao buscar unidades cadastradas:", error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    buscarProdutosCadastradas();
+    buscarSetorCadastradas();
+    buscarUnidadesCadastradas();
+  }, []);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const unidadesResponse = await buscarUnidades();
+        const setoresResponse = await buscarSetor();
+
+        const unidadesFormatadas = unidadesResponse.data.map(unidade => ({
+          value: unidade.id,
+          label: unidade.nome
+        }));
+
+        const setoresFormatados = setoresResponse.data.map(setor => ({
+          value: setor.id,
+          label: setor.nome
+        }));
+
+        setUnidadesCadastradas(unidadesFormatadas);
+        setSetoresCadastradas(setoresFormatados);
+      } catch (error) {
+        console.error("Erro ao buscar dados:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
   return (
     <div className="flex gap-4 ">
       <Navbar />
@@ -177,7 +274,12 @@ const Usuario = () => {
             <div className="w-[90%]">
               <TableComponent
                 headers={headerUsuario}
-                rows={rows} // Passando rows para o TableComponent
+                rows={produtosCadastradas.map(usuario => ({
+                  Nome: usuario.nome,
+                  Cpf: usuario.cpf,
+                  Setor: usuario.setor, // Adicione o setor
+                  Unidade: usuario.unidade, // Adicione a unidade
+                }))} // Passando rows para o TableComponent
                 actionsLabel={"Ações"} // Se você quiser adicionar ações
                 actionCalls={{
                   edit: handleModalEditar,
@@ -221,23 +323,15 @@ const Usuario = () => {
                 ),
               }}
             />
-            <TextField
-              fullWidth
-              variant="outlined"
-              size="small"
+            <MaskedFieldCpf
+              type="cpf"
               label="CPF"
-              name="nome"
               value={cpf}
               onChange={(e) => setCpf(e.target.value)}
-              sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '42%' } }}
-              autoComplete="off"
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <ContactPageIcon />
-                  </InputAdornment>
-                ),
-              }}
+              icon={<ArticleIcon />} // Substitua por um ícone se necessário
+              iconSize={24}
+              labelSize="small"
+              width="41%" // Ou qualquer valor que você queira
             />
             <TextField
               fullWidth
@@ -265,100 +359,124 @@ const Usuario = () => {
               backgroundColor={"#D9D9D9"}
               fontWeight={500}
               options={tiposUsuarios}
+              onChange={(event) => setSelectedTipoAcesso(event.target.value)} // Certifique-se de que isso está correto
             />
-            <SelectTextFields
-              width={'200px'}
-              icon={<LocationOnIcon fontSize="small" />}
-              label={'Unidades'}
-              backgroundColor={"#D9D9D9"}
-              fontWeight={500}
-              options={unidades}
-              onChange={handleUnidade}
-            />
+            {selectedTipoAcesso !== 1 && selectedTipoAcesso !== 2 && ( // Se não for "Administrador"
+              <>
+                <SelectTextFields
+                  width={'200px'}
+                  icon={<LocationOnIcon fontSize="small" />}
+                  label={'Unidades'}
+                  backgroundColor={"#D9D9D9"}
+                  fontWeight={500}
+                  options={unidadesCadastradas} // Já está no formato correto
+                  onChange={handleUnidade}
+                />
 
-            <FormControl
-              fullWidth
-              variant="outlined"
-              size="small"
-              sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '43%' } }}
-            >
-              <InputLabel id="setores-label">Setores</InputLabel>
-              <Select
-                labelId="setores-label"
-                label="Setores"
-                multiple
-                value={selectedSetores.map(s => s.value)}
-                onChange={handleSetores}
-                renderValue={(selected) => (
-                  <div>
-                    {selected.map(value => {
-                      const setor = setores.find(s => s.value === value);
-                      return <Chip key={value} label={setor.label} />;
-                    })}
+                <FormControl
+                  fullWidth
+                  variant="outlined"
+                  size="small"
+                  sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '43%' } }}
+                >
+                  <InputLabel id="setores-label">Setores</InputLabel>
+                  <Select
+                    labelId="setores-label"
+                    label="Setores"
+                    multiple
+                    value={selectedSetores.map(s => s.value)}
+                    onChange={handleSetores}
+                    renderValue={(selected) => (
+                      <div>
+                        {selected.map(value => {
+                          const setor = setoresCadastradas.find(s => s.value === value);
+                          return <Chip key={value} label={setor.label} />;
+                        })}
+                      </div>
+                    )}
+                  >
+                    {setoresCadastradas.map((setor) => (
+                      <MenuItem key={setor.value} value={setor.value}>
+                        {setor.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <ButtonComponent
+                  subtitle={'Adicionar'}
+                  startIcon={<AddCircleOutline />}
+                  onClick={handleAddItem}
+                />
+                {showAddedItems && (
+                  <div className="flex items-center w-full mt-2">
+                    <label className="w-[25%] text-sm ml-3">Unidade</label>
+                    <label className="w-[20%] text-sm">Setores</label>
+                    {selectedTipoAcesso !== 4 && ( // Condição para mostrar o rótulo "Permissão"
+                      <label className="w-[30%] text-sm">Permissão</label>
+                    )}
                   </div>
                 )}
-              >
-                {setores.map((setor) => (
-                  <MenuItem key={setor.value} value={setor.value}>
-                    {setor.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <ButtonComponent
-              subtitle={'Adicionar'}
-              startIcon={<AddCircleOutline />}
-              onClick={handleAddItem}
-            />
-          </div>
-
-          {showAddedItems && (
-            <div className="flex items-center w-full mt-2">
-              <label className="w-[25%] text-sm ml-3">Unidade</label>
-              <label className="w-[20%] text-sm">Setores</label>
-              <label className="w-[30%] text-sm">Permissão</label>
-            </div>
-          )}
-          {showAddedItems && (
-            <div className='mt-4 p-4 w-[95%]' style={{ border: '1px solid #006b33', borderRadius: "10px" }}>
-              {addedItems.map((item, index) => (
-                <div key={index} className='flex'>
-                  <label className="w-[30%]">{` ${item.unidade.label} `}</label>
-                  <div className="flex w-[60%] flex-col gap-2">
-                    {item.setores.map(setor => (
-                      <div key={setor.value} className="flex w-full">
-                        <div className="flex w-full">
-                          <label className="w-[40%]">{`${setor.label} `}</label>
-                          <SelectTextFields
-                            width={'150px'}
-                            icon={<LocationOnIcon fontSize="small" />}
-                            label={'Permissão'}
-                            backgroundColor={"#D9D9D9"}
-                            fontWeight={500}
-                            options={permissao}
-                          />
-                          <ButtonClose
-                            subtitle={'Remover'}
+                {showAddedItems && (
+                  <div className='mt-4  w-[95%]' >
+                    {addedItems.map((item, index) => (
+                      <div key={index} style={{ border: '1px solid #006b33', borderRadius: "10px", }} className='flex p-4 mb-2 items-center'>
+                        <label className="w-[30%]">{` ${item.unidade.label} `}</label>
+                        <div className="flex w-[60%] flex-col gap-2">
+                          {item.setores.map(setor => (
+                            <div key={setor.value} className="flex w-full">
+                              <div className="flex w-full">
+                                <label className="w-[40%] text-xs">{`${setor.label} `}</label>
+                                {selectedTipoAcesso !== 4 && (
+                                  <SelectTextFields
+                                    width={'150px'}
+                                    icon={<LocationOnIcon fontSize="small" />}
+                                    label={'Permissão'}
+                                    backgroundColor={"#D9D9D9"}
+                                    fontWeight={500}
+                                    options={permissao}
+                                    value={setor.permissao} // Define o valor da permissão
+                                    onChange={(e) => {
+                                      const newPermissao = e.target.value;
+                                      const updatedItems = addedItems.map((item, index) => {
+                                        if (index === addedItems.indexOf(item)) {
+                                          return {
+                                            ...item,
+                                            setores: item.setores.map(s =>
+                                              s.value === setor.value ? { ...s, permissao: newPermissao } : s
+                                            )
+                                          };
+                                        }
+                                        return item;
+                                      });
+                                      setAddedItems(updatedItems);
+                                    }}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div>
+                          <ButtonComponent
+                            title={'Remover'}
+                            onClick={() => {
+                              const updatedItems = addedItems.filter((_, i) => i !== index);
+                              setAddedItems(updatedItems);
+                              if (updatedItems.length === 0) {
+                                setShowAddedItems(false); // Esconde a seção se não houver mais itens
+                              }
+                            }}
                           />
                         </div>
+
                       </div>
                     ))}
                   </div>
-                  <ButtonComponent
-                    title={'Remover'}
-                    onClick={() => {
-                      const updatedItems = addedItems.filter((_, i) => i !== index);
-                      setAddedItems(updatedItems);
-                      if (updatedItems.length === 0) {
-                        setShowAddedItems(false); // Esconde a seção se não houver mais itens
-                      }
-                    }}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+                )}
+              </>
+            )}
+          </div>
+
           <div className='w-[95%] mt-2 flex items-end justify-end'>
             <ButtonComponent
               title={'Cadastrar'}
@@ -396,21 +514,15 @@ const Usuario = () => {
                   ),
                 }}
               />
-              <TextField
-                fullWidth
-                variant="outlined"
-                size="small"
+              <MaskedFieldCpf
+                type="cpf"
                 label="CPF"
-                name="nome"
-                sx={{ width: { xs: '95%', sm: '50%', md: '40%', lg: '45%' } }}
-                autoComplete="off"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <ContactPageIcon />
-                    </InputAdornment>
-                  ),
-                }}
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                icon={<ArticleIcon />} // Substitua por um ícone se necessário
+                iconSize={24}
+                labelSize="medium"
+                width="100%" // Ou qualquer valor que você queira
               />
               <TextField
                 fullWidth
@@ -443,7 +555,7 @@ const Usuario = () => {
                 label={'Unidades'}
                 backgroundColor={"#D9D9D9"}
                 fontWeight={500}
-                options={unidades}
+                options={unidadesCadastradas} // Changed from unidades to unidadesCadastradas
                 onChange={handleUnidade}
               />
 
@@ -463,13 +575,13 @@ const Usuario = () => {
                   renderValue={(selected) => (
                     <div>
                       {selected.map(value => {
-                        const setor = setores.find(s => s.value === value);
+                        const setor = setoresCadastradas.find(s => s.value === value); // Changed from setores to setoresCadastradas
                         return <Chip key={value} label={setor.label} />;
                       })}
                     </div>
                   )}
                 >
-                  {setores.map((setor) => (
+                  {setoresCadastradas.map((setor) => ( // Changed from setores to setoresCadastradas
                     <MenuItem key={setor.value} value={setor.value}>
                       {setor.label}
                     </MenuItem>
@@ -545,4 +657,4 @@ const Usuario = () => {
   )
 }
 
-export default Usuario; 
+export default Usuario;
